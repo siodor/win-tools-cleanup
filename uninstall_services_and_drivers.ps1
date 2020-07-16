@@ -76,12 +76,30 @@ FYI: Some error messages might appear, this just means that certain things don't
 Read-Host -Prompt "If the above was understood press any key to continue or Ctrl+C to quit" 
 
 #Disable Driver Updates through Windows Update
+## This should disallow driver installations through Windows Update on Windows 7
+## Values from DeviceSetup.admx, DeviceSetup.adml and various online sources
+Set-ItemProperty -Path HKLM:\SOFTWARE\Policies\Microsoft\Windows\DriverSearching -Name SearchOrderConfig -Value 0
 Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching -Name SearchOrderConfig -Value 0
+## This should disallow driver installations through Windows Update on Windows 10
+## Values from WindowsUpdate.admx, WindowsUpdate.adml and various online sources
+## This will create in Windows Update the message:
+## *Some settings are managed by your organisation
+## View configured update policies
+#############################################################################################################
+# These registry keys will stay after the upgrade to prevent Windows Update from pulling in Citrix drivers. #
+#############################################################################################################
+New-Item -Path HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Update
+Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Update -Name ExcludeWUDriversInQualityUpdate -Value 1
+Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Update -Name ExcludeWUDriversInQualityUpdate -Value 1
+New-Item -Path HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
+Set-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings -Name ExcludeWUDriversInQualityUpdate -Value 1
+Set-ItemProperty -Path HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate -Name ExcludeWUDriversInQualityUpdate -Value 1
+
 
 #Disable + Stop, Windows Update, Windows Modules Installer and BITS to prevent trouble during removal of stuff
-Get-Service wuauserv | ForEach-Object {Set-Service $_.Name -StartupType Disabled; Stop-Service $_.Name}
-Get-Service TrustedInstaller | ForEach-Object {Set-Service $_.Name -StartupType Disabled; Stop-Service $_.Name}
-Get-Service BITS | ForEach-Object {Set-Service $_.Name -StartupType Disabled; Stop-Service $_.Name}
+Get-Service wuauserv | ForEach-Object {Set-Service $_.Name -StartupType Disabled; Stop-Service $_.Name -Force}
+Get-Service TrustedInstaller | ForEach-Object {Set-Service $_.Name -StartupType Disabled; Stop-Service $_.Name -Force}
+Get-Service BITS | ForEach-Object {Set-Service $_.Name -StartupType Disabled; Stop-Service $_.Name -Force}
 
 #Uninstall Management Agent
 (Get-WmiObject -Class Win32_Product ` -Filter "Name = 'Citrix XenServer Windows Management Agent'").Uninstall()
